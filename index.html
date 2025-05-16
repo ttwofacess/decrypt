@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Descifrador de Emails</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f4;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #28a745;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .form-group input[type="text"],
+        .form-group input[type="password"],
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1em;
+        }
+        
+        .form-group textarea {
+            height: 100px;
+            resize: vertical;
+        }
+        
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-size: 1.2em;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        
+        button:hover {
+            background-color: #218838;
+        }
+        
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+        
+        .error {
+            color: #dc3545;
+            margin-top: 5px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Descifrador de Emails</h1>
+        <div class="form-group">
+            <label for="encrypted-email">Email Cifrado:</label>
+            <textarea id="encrypted-email" placeholder="Pega aquí el email cifrado"></textarea>
+        </div>
+        <div class="form-group">
+            <label for="secret-key">Clave de Descifrado:</label>
+            <input type="password" id="secret-key" placeholder="Introduce la clave de descifrado">
+        </div>
+        <button id="decrypt-button">Descifrar Email</button>
+        <button id="clear-button">Limpiar</button>
+        
+        <div class="result" id="result" style="display: none;">
+            <h3>Email Descifrado:</h3>
+            <p id="decrypted-email"></p>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('decrypt-button').addEventListener('click', async function() {
+            const encryptedEmail = document.getElementById('encrypted-email').value.trim();
+            const secretKey = document.getElementById('secret-key').value;
+            const resultDiv = document.getElementById('result');
+            const decryptedEmailElement = document.getElementById('decrypted-email');
+            
+            // Validaciones básicas
+            if (!encryptedEmail || !secretKey) {
+                alert('Por favor, introduce tanto el email cifrado como la clave de descifrado');
+                return;
+            }
+            
+            try {
+                // Extraer IV (primeros 12 bytes) y el texto cifrado del email cifrado en base64
+                const encryptedData = Uint8Array.from(atob(encryptedEmail), c => c.charCodeAt(0));
+                const iv = encryptedData.slice(0, 12);
+                const ciphertext = encryptedData.slice(12);
+                
+                // Importar la clave
+                const keyBuffer = Uint8Array.from(atob(secretKey), c => c.charCodeAt(0));
+                const key = await crypto.subtle.importKey(
+                    "raw",
+                    keyBuffer,
+                    { name: "AES-GCM" },
+                    false,
+                    ["decrypt"]
+                );
+                
+                // Descifrar
+                const decryptedBuffer = await crypto.subtle.decrypt(
+                    { name: "AES-GCM", iv: iv },
+                    key,
+                    ciphertext
+                );
+                
+                // Convertir el resultado a texto
+                const decryptedEmail = new TextDecoder().decode(decryptedBuffer);
+                
+                // Mostrar el resultado
+                decryptedEmailElement.textContent = decryptedEmail;
+                resultDiv.style.display = 'block';
+                
+            } catch (error) {
+                console.error('Error al descifrar:', error);
+                alert('Error al descifrar el email. Verifica que el email cifrado y la clave sean correctos.');
+            }
+        });
+        
+        document.getElementById('clear-button').addEventListener('click', function() {
+            document.getElementById('encrypted-email').value = '';
+            document.getElementById('secret-key').value = '';
+            document.getElementById('result').style.display = 'none';
+            document.getElementById('decrypted-email').textContent = '';
+        });
+    </script>
+</body>
+</html>
